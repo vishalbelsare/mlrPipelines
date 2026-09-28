@@ -3,7 +3,7 @@
 #' @usage mlr_learners_classif.avg
 #' @name mlr_learners_avg
 #' @aliases mlr_learners_classif.avg
-#' @format [`R6Class`] object inheriting from [`mlr3::LearnerClassif`]/[`mlr3::Learner`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`mlr3::LearnerClassif`]/[`mlr3::Learner`].
 #'
 #' @description
 #' Computes a weighted average of inputs.
@@ -23,7 +23,7 @@
 #' incoming features.
 #'
 #' @section Parameters:
-#' The parameters are the parameters inherited from [`LearnerClassif`], as well as:
+#' The parameters are the parameters inherited from [`LearnerClassif`][mlr3::LearnerClassif], as well as:
 #'  * `measure` :: [`Measure`][mlr3::Measure] | `character` \cr
 #'    [`Measure`][mlr3::Measure] to optimize for.
 #'    Will be converted to a [`Measure`][mlr3::Measure] in case it is `character`.
@@ -32,12 +32,12 @@
 #'  * `optimizer` :: [`Optimizer`][bbotk::Optimizer] | `character(1)`\cr
 #'    [`Optimizer`][bbotk::Optimizer] used to find optimal thresholds.
 #'    If `character`, converts to [`Optimizer`][bbotk::Optimizer]
-#'    via [`opt`][bbotk::opt]. Initialized to [`OptimizerNLoptr`][bbotk::OptimizerNLoptr].
+#'    via [`opt`][bbotk::opt]. Initialized to `OptimizerNLoptr`.
 #'    Nloptr hyperparameters are initialized to `xtol_rel = 1e-8`, `algorithm = "NLOPT_LN_COBYLA"`
 #'    and equal initial weights for each learner.
 #'    For more fine-grained control, it is recommended to supply a instantiated [`Optimizer`][bbotk::Optimizer].
 #'  * `log_level` :: `character(1)` | `integer(1)`\cr
-#'    Set a temporary log-level for `lgr::get_logger("bbotk")`. Initialized to: "warn".
+#'    Set a temporary log-level for `lgr::get_logger("mlr3/bbotk")`. Initialized to: "warn".
 #'
 #'
 #' @section Methods:
@@ -58,12 +58,14 @@
 LearnerClassifAvg = R6Class("LearnerClassifAvg", inherit = LearnerClassif,
   public = list(
     initialize = function(id = "classif.avg") {
-      ps = ParamSet$new(params = list(
-        ParamUty$new("measure", custom_check = check_class_or_character("MeasureClassif", mlr_measures), tags = "train"),
-        ParamUty$new("optimizer", custom_check = check_optimizer, tags = "train"),
-        ParamUty$new("log_level", tags = "train",
-          function(x) check_string(x) %check||% check_integerish(x))
-      ))
+      ps = ps(
+        measure = p_uty(custom_check = check_class_or_character("MeasureClassif", mlr_measures), tags = c("train", "required")),
+        optimizer = p_uty(custom_check = check_optimizer, tags = c("train", "required")),
+        log_level = p_uty(
+          custom_check = crate(function(x) check_string(x) %check||% check_integerish(x)),
+          tags = c("train", "required")
+        )
+      )
       ps$values = list(measure = "classif.ce", optimizer = "nloptr", log_level = "warn")
       super$initialize(
         id = id,
@@ -132,12 +134,12 @@ LearnerClassifAvg = R6Class("LearnerClassifAvg", inherit = LearnerClassif,
 LearnerRegrAvg = R6Class("LearnerRegrAvg", inherit = LearnerRegr,
   public = list(
     initialize = function(id = "regr.avg") {
-      ps = ParamSet$new(params = list(
-        ParamUty$new("measure", custom_check = check_class_or_character("MeasureRegr", mlr_measures), tags = "train"),
-        ParamUty$new("optimizer", custom_check = check_optimizer, tags = "train"),
-        ParamUty$new("log_level", tags = "train",
+      ps = ps(
+        measure = p_uty(custom_check = check_class_or_character("MeasureRegr", mlr_measures), tags = c("train", "required")),
+        optimizer = p_uty(custom_check = check_optimizer, tags = c("train", "required")),
+        log_level = p_uty(tags = c("train", "required"),
           function(x) check_string(x) %check||% check_integerish(x))
-      ))
+      )
       ps$values = list(measure = "regr.mse", optimizer = "nloptr", log_level = "warn")
       super$initialize(
         id = id,
@@ -185,25 +187,24 @@ optimize_weights_learneravg = function(self, task, n_weights, data) {
       }
 
       pars = self$param_set$get_values(tags = "train")
-      ps = ParamSet$new(params = imap(data, function(x, n) {
-        if (is.numeric(n)) n = paste0("w.", n)
-        ParamDbl$new(id = n, lower = 0, upper = 1)
-      }))
+      pl = rep(list(p_dbl(0, 1)), length(data))
+      names(pl) = names(data) %??% paste0("w.", seq_along(data))
+      ps = do.call(ps, pl)
       optimizer = pars$optimizer
       if (inherits(optimizer, "character")) {
         optimizer = bbotk::opt(optimizer)
-        if (inherits(optimizer, "OptimizerNLoptr")) {
-          optimizer$param_set$values = list(xtol_rel = 1e-8, algorithm = "NLOPT_LN_COBYLA", start_values = "center")
+        if (inherits(optimizer, "OptimizerNLoptr") || inherits(optimizer, "OptimizerBatchNLoptr")) {
+          optimizer$param_set$set_values(xtol_rel = 1e-8, algorithm = "NLOPT_LN_COBYLA", start_values = "center")
         }
       }
       measure = pars$measure
       if (is.character(measure)) measure = msr(measure)
-      codomain = ParamSet$new(list(ParamDbl$new(id = measure$id, tags = ifelse(measure$minimize, "minimize", "maximize"))))
+      codomain = do.call(paradox::ps, structure(list(p_dbl(tags = ifelse(measure$minimize, "minimize", "maximize"))), names = measure$id))
       objfun = bbotk::ObjectiveRFun$new(
         fun = function(xs) learneravg_objfun(xs, task = task, measure = measure, avg_weight_fun = self$weighted_average_prediction, data = data),
         domain = ps, codomain = codomain
       )
-      inst = bbotk::OptimInstanceSingleCrit$new(
+      inst = bbotk::OptimInstanceBatchSingleCrit$new(
         objective = objfun,
         terminator = bbotk::trm("combo", terminators = list(
           bbotk::trm("stagnation", iters = 20 * n_weights),
@@ -212,8 +213,14 @@ optimize_weights_learneravg = function(self, task, n_weights, data) {
       )
       lgr = lgr::get_logger("bbotk")
       old_threshold = lgr$threshold
-      on.exit(lgr$set_threshold(old_threshold))
+      lgr2 = lgr::get_logger("mlr3/bbotk")
+      old_threshold2 = lgr2$threshold
+      on.exit({
+        lgr$set_threshold(old_threshold)
+        lgr2$set_threshold(old_threshold2)
+      })
       lgr$set_threshold(self$param_set$values$log_level)
+      lgr2$set_threshold(self$param_set$values$log_level)
       optimizer$optimize(inst)
       unlist(inst$result_x_domain)
 }

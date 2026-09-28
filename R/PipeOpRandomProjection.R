@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_randomprojection
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Projects numeric features onto a randomly sampled subspace. All numeric features
@@ -49,6 +49,9 @@
 #' that is rotation invariant, as per Eaton: Multivariate Statistics, A Vector Space
 #' Approach, Pg. 234.
 #'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
+#'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
@@ -70,9 +73,9 @@ PipeOpRandomProjection = R6Class("PipeOpRandomProjection",
   inherit = PipeOpTaskPreprocSimple,
   public = list(
     initialize = function(id = "randomprojection", param_vals = list()) {
-      ps = ParamSet$new(list(
-        ParamInt$new("rank", lower = 0, tags = "train")
-      ))
+      ps = ps(
+        rank = p_int(lower = 0, tags = "train")
+      )
       ps$values = list(rank = 1)
       super$initialize(id, param_set = ps, param_vals = param_vals, feature_types = c("numeric", "integer"))
     }

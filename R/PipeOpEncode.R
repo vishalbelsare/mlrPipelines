@@ -2,10 +2,10 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_encode
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
-#' Encodes columns of type `factor`, `character` and `ordered`.
+#' Encodes columns of type `factor` and `ordered`.
 #'
 #' Possible encodings are `"one-hot"` encoding, as well as encoding according to `stats::contr.helmert()`, `stats::contr.poly()`,
 #' `stats::contr.sum()` and `stats::contr.treatment()`.
@@ -14,10 +14,13 @@
 #'
 #' Use the [`PipeOpTaskPreproc`] `$affect_columns` functionality to only encode a subset of columns, or only encode columns of a certain type.
 #'
+#' `character`-type features can be encoded by converting them `factor` features first, using [`ppl("convert_types", "character", "factor")`][mlr_graphs_convert_types].
+#'
 #' @section Construction:
 #' ```
 #' PipeOpEncode$new(id = "encode", param_vals = list())
 #' ```
+#'
 #' * `id` :: `character(1)`\cr
 #'   Identifier of resulting object, default `"encode"`.
 #' * `param_vals` :: named `list`\cr
@@ -26,13 +29,13 @@
 #' @section Input and Output Channels:
 #' Input and output channels are inherited from [`PipeOpTaskPreproc`].
 #'
-#' The output is the input [`Task`][mlr3::Task] with all affected `factor`, `character` or `ordered` parameters encoded according to the `method`
+#' The output is the input [`Task`][mlr3::Task] with all affected `factor` and `ordered` columns encoded according to the `method`
 #' parameter.
 #'
 #' @section State:
 #' The `$state` is a named `list` with the `$state` elements inherited from [`PipeOpTaskPreproc`], as well as:
-#' * `constrasts` :: named `list` of `matrix`\cr
-#'   List of contrast matrices, one for each affected discrete feature. The rows of each matrix correspond to (training task) levels, the the
+#' * `contrasts` :: named `list` of `matrix`\cr
+#'   List of contrast matrices, one for each affected discrete feature. The rows of each matrix correspond to (training task) levels, the
 #'   columns to the new columns that replace the old discrete feature. See [`stats::contrasts`].
 #'
 #' @section Parameters:
@@ -47,6 +50,9 @@
 #'
 #' @section Internals:
 #' Uses the [`stats::contrasts`] functions. This is relatively inefficient for features with a large number of levels.
+#'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
 #'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
@@ -78,13 +84,21 @@
 #'
 #' poe$param_set$values$method = "sum"
 #' poe$train(list(task))[[1]]$data()
+#'
+#' # converting character-columns
+#' data_chr = data.table::data.table(x = factor(letters[1:3]), y = letters[1:3])
+#' task_chr = TaskClassif$new("task_chr", data_chr, "x")
+#'
+#' goe = ppl("convert_types", "character", "factor") %>>% po("encode")
+#'
+#' goe$train(task_chr)[[1]]$data()
 PipeOpEncode = R6Class("PipeOpEncode",
   inherit = PipeOpTaskPreprocSimple,
   public = list(
     initialize = function(id = "encode", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamFct$new("method", levels = c("one-hot", "treatment", "helmert", "poly", "sum"), tags = c("train", "predict"))
-      ))
+      ps = ps(
+        method = p_fct(levels = c("one-hot", "treatment", "helmert", "poly", "sum"), tags = c("train", "predict"))
+      )
       ps$values = list(method = "one-hot")
       super$initialize(id, param_set = ps, param_vals = param_vals, packages = "stats", tags = "encode", feature_types = c("factor", "ordered"))
     }

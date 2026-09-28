@@ -5,10 +5,10 @@
 \alias{PipeOpBranch}
 \title{Path Branching}
 \format{
-\code{\link{R6Class}} object inheriting from \code{\link{PipeOp}}.
+\code{\link[R6:R6Class]{R6Class}} object inheriting from \code{\link{PipeOp}}.
 }
 \description{
-Perform alternative path branching: \code{\link{PipeOpBranch}} has multiple output channels
+Perform alternative path branching: \code{PipeOpBranch} has multiple output channels
 that connect to different paths in a \code{\link{Graph}}. At any time, only one of these
 paths will be taken for execution. At the end of the different paths, the
 \code{\link{PipeOpUnbranch}} \code{PipeOp} must be used to indicate the end of alternative paths.
@@ -24,9 +24,9 @@ Not to be confused with \code{\link{PipeOpCopy}}, the naming scheme is a bit unf
 \item \code{options} :: \code{numeric(1)} | \code{character}\cr
 If \code{options} is an integer number, it determines the number of
 output channels / options that are created, named \code{output1}...\verb{output<n>}. The
-\verb{$selection} parameter will then be a \code{\link{ParamInt}}.
+\verb{$selection} parameter will then be an integer.
 If \code{options} is a \code{character}, it determines the names of channels directly.
-The \verb{$selection} parameter will then be a \code{\link{ParamFct}}.
+The \verb{$selection} parameter will then be factorial.
 \item \code{id} :: \code{character(1)}\cr
 Identifier of resulting object, default \code{"branch"}.
 \item \code{param_vals} :: named \code{list}\cr
@@ -36,9 +36,9 @@ List of hyperparameter settings, overwriting the hyperparameter settings that wo
 
 \section{Input and Output Channels}{
 
-\code{\link{PipeOpBranch}} has one input channel named \code{"input"}, taking any input (\code{"*"}) both during training and prediction.
+\code{PipeOpBranch} has one input channel named \code{"input"}, taking any input (\code{"*"}) both during training and prediction.
 
-\code{\link{PipeOpBranch}} has multiple output channels depending on the \code{options} construction argument, named \code{"output1"}, \code{"output2"}, ...
+\code{PipeOpBranch} has multiple output channels depending on the \code{options} construction argument, named \code{"output1"}, \code{"output2"}, ...
 if \code{options} is \code{numeric}, and named after each \code{options} value if \code{options} is a \code{character}.
 All output channels produce the object given as input (\code{"*"}) or \code{\link{NO_OP}}, both during training and prediction.
 }
@@ -63,7 +63,7 @@ or the first element of \code{options} (if it is \code{character}).
 \section{Internals}{
 
 Alternative path branching is handled by the \code{\link{PipeOp}} backend. To indicate that
-a path should not be taken, \code{\link{PipeOpBranch}} returns the \code{\link{NO_OP}} object on its
+a path should not be taken, \code{PipeOpBranch} returns the \code{\link{NO_OP}} object on its
 output channel. The \code{\link{PipeOp}} handles each \code{\link{NO_OP}} input by automatically
 returning a \code{\link{NO_OP}} output without calling \code{private$.train()} or \code{private$.predict()},
 until \code{\link{PipeOpUnbranch}} is reached. \code{\link{PipeOpUnbranch}} will then take multiple inputs,
@@ -100,26 +100,34 @@ gr$train(tsk("iris"))
 \seealso{
 https://mlr-org.com/pipeops.html
 
-Other PipeOps: 
+Other PipeOps:
+\code{\link{PipeOp}},
+\code{\link{PipeOpEncodePL}},
 \code{\link{PipeOpEnsemble}},
 \code{\link{PipeOpImpute}},
 \code{\link{PipeOpTargetTrafo}},
-\code{\link{PipeOpTaskPreprocSimple}},
 \code{\link{PipeOpTaskPreproc}},
-\code{\link{PipeOp}},
+\code{\link{PipeOpTaskPreprocSimple}},
+\code{\link{mlr_pipeops}},
+\code{\link{mlr_pipeops_adas}},
+\code{\link{mlr_pipeops_blsmote}},
 \code{\link{mlr_pipeops_boxcox}},
 \code{\link{mlr_pipeops_chunk}},
 \code{\link{mlr_pipeops_classbalancing}},
 \code{\link{mlr_pipeops_classifavg}},
 \code{\link{mlr_pipeops_classweights}},
+\code{\link{mlr_pipeops_classweightsex}},
 \code{\link{mlr_pipeops_colapply}},
 \code{\link{mlr_pipeops_collapsefactors}},
 \code{\link{mlr_pipeops_colroles}},
 \code{\link{mlr_pipeops_copy}},
 \code{\link{mlr_pipeops_datefeatures}},
+\code{\link{mlr_pipeops_decode}},
+\code{\link{mlr_pipeops_encode}},
 \code{\link{mlr_pipeops_encodeimpact}},
 \code{\link{mlr_pipeops_encodelmer}},
-\code{\link{mlr_pipeops_encode}},
+\code{\link{mlr_pipeops_encodeplquantiles}},
+\code{\link{mlr_pipeops_encodepltree}},
 \code{\link{mlr_pipeops_featureunion}},
 \code{\link{mlr_pipeops_filter}},
 \code{\link{mlr_pipeops_fixfactors}},
@@ -133,13 +141,19 @@ Other PipeOps:
 \code{\link{mlr_pipeops_imputemode}},
 \code{\link{mlr_pipeops_imputeoor}},
 \code{\link{mlr_pipeops_imputesample}},
+\code{\link{mlr_pipeops_info}},
+\code{\link{mlr_pipeops_isomap}},
 \code{\link{mlr_pipeops_kernelpca}},
 \code{\link{mlr_pipeops_learner}},
+\code{\link{mlr_pipeops_learner_pi_cvplus}},
+\code{\link{mlr_pipeops_learner_quantiles}},
+\code{\link{mlr_pipeops_materialize}},
 \code{\link{mlr_pipeops_missind}},
 \code{\link{mlr_pipeops_modelmatrix}},
 \code{\link{mlr_pipeops_multiplicityexply}},
 \code{\link{mlr_pipeops_multiplicityimply}},
 \code{\link{mlr_pipeops_mutate}},
+\code{\link{mlr_pipeops_nearmiss}},
 \code{\link{mlr_pipeops_nmf}},
 \code{\link{mlr_pipeops_nop}},
 \code{\link{mlr_pipeops_ovrsplit}},
@@ -153,29 +167,32 @@ Other PipeOps:
 \code{\link{mlr_pipeops_removeconstants}},
 \code{\link{mlr_pipeops_renamecolumns}},
 \code{\link{mlr_pipeops_replicate}},
+\code{\link{mlr_pipeops_rowapply}},
+\code{\link{mlr_pipeops_scale}},
 \code{\link{mlr_pipeops_scalemaxabs}},
 \code{\link{mlr_pipeops_scalerange}},
-\code{\link{mlr_pipeops_scale}},
 \code{\link{mlr_pipeops_select}},
 \code{\link{mlr_pipeops_smote}},
+\code{\link{mlr_pipeops_smotenc}},
 \code{\link{mlr_pipeops_spatialsign}},
+\code{\link{mlr_pipeops_splines}},
 \code{\link{mlr_pipeops_subsample}},
 \code{\link{mlr_pipeops_targetinvert}},
 \code{\link{mlr_pipeops_targetmutate}},
 \code{\link{mlr_pipeops_targettrafoscalerange}},
 \code{\link{mlr_pipeops_textvectorizer}},
 \code{\link{mlr_pipeops_threshold}},
+\code{\link{mlr_pipeops_tomek}},
 \code{\link{mlr_pipeops_tunethreshold}},
 \code{\link{mlr_pipeops_unbranch}},
 \code{\link{mlr_pipeops_updatetarget}},
 \code{\link{mlr_pipeops_vtreat}},
-\code{\link{mlr_pipeops_yeojohnson}},
-\code{\link{mlr_pipeops}}
+\code{\link{mlr_pipeops_yeojohnson}}
 
-Other Path Branching: 
+Other Path Branching:
 \code{\link{NO_OP}},
-\code{\link{filter_noop}()},
-\code{\link{is_noop}()},
+\code{\link[=filter_noop]{filter_noop()}},
+\code{\link[=is_noop]{is_noop()}},
 \code{\link{mlr_pipeops_unbranch}}
 }
 \concept{Path Branching}

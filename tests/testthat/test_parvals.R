@@ -6,8 +6,8 @@ test_that("graph param vals", {
   gr$add_pipeop(PipeOpPCA$new())
   expect_equal(gr$ids(TRUE), c("scale", "pca"))
 
-  expect_equal(gr$pipeops$scale$param_set$values$center, NULL)
-  expect_equal(gr$param_set$values$scale.center, NULL)
+  expect_null(gr$pipeops$scale$param_set$values$center)
+  expect_null(gr$param_set$values$scale.center)
   gr$param_set$values$scale.center = FALSE
   expect_equal(gr$pipeops$scale$param_set$values$center, FALSE)
   expect_equal(gr$param_set$values$scale.center, FALSE)
@@ -16,8 +16,8 @@ test_that("graph param vals", {
   expect_equal(gr$param_set$values$scale.center, TRUE)
 
 
-  expect_equal(gr$pipeops$pca$param_set$values$center, NULL)
-  expect_equal(gr$param_set$values$pca.center, NULL)
+  expect_null(gr$pipeops$pca$param_set$values$center)
+  expect_null(gr$param_set$values$pca.center)
   gr$param_set$values$pca.center = FALSE
   expect_equal(gr$pipeops$pca$param_set$values$center, FALSE)
   expect_equal(gr$param_set$values$pca.center, FALSE)
@@ -25,7 +25,7 @@ test_that("graph param vals", {
   expect_equal(gr$pipeops$pca$param_set$values$center, TRUE)
   expect_equal(gr$param_set$values$pca.center, TRUE)
 
-  expect_set_equal(names(gr$param_set$params),
+  expect_set_equal(gr$param_set$ids(),
     c("scale.center", "scale.scale" ,"scale.robust", "scale.affect_columns", "pca.center", "pca.scale.", "pca.rank.", "pca.affect_columns"))
 
   expect_error({

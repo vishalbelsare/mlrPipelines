@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_yeojohnson
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Conducts a Yeo-Johnson transformation on numeric features. It therefore estimates
@@ -46,10 +46,13 @@
 #' @section Internals:
 #' Uses the [`bestNormalize::yeojohnson`] function.
 #'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
+#'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
-#' @examples
+#' @examplesIf requireNamespace("bestNormalize")
 #' library("mlr3")
 #'
 #' task = tsk("iris")
@@ -67,12 +70,12 @@ PipeOpYeoJohnson = R6Class("PipeOpYeoJohnson",
   inherit = PipeOpTaskPreproc,
   public = list(
     initialize = function(id = "yeojohnson", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamDbl$new("eps", default = 0.001, lower = 0, tags = c("train", "yj")),
-        ParamLgl$new("standardize", default = TRUE, tags = c("train", "yj")),
-        ParamDbl$new("lower", tags = c("train", "yj")),
-        ParamDbl$new("upper", tags = c("train", "yj"))
-      ))
+      ps = ps(
+        eps = p_dbl(default = 0.001, lower = 0, tags = c("train", "yj")),
+        standardize = p_lgl(default = TRUE, tags = c("train", "yj")),
+        lower = p_dbl(tags = c("train", "yj")),
+        upper = p_dbl(tags = c("train", "yj"))
+      )
       super$initialize(id, param_set = ps, param_vals = param_vals,
         packages = "bestNormalize", feature_types = c("numeric", "integer"))
     }

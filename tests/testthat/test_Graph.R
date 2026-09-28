@@ -1,6 +1,7 @@
 context("Graph")
 
 test_that("linear graph", {
+  skip_if_not_installed("rpart")
   g = Graph$new()
   expect_equal(g$ids(sorted = TRUE), character(0))
 
@@ -19,15 +20,15 @@ test_that("linear graph", {
 
   expect_graph(g)
 
-  expect_output(print(g), "Graph with 2 PipeOps.*subsample.*UNTRAINED.*pca.*UNTRAINED")
-
-
+  expect_output(print(g), "Graph with 2 PipeOps:")
+  expect_output(print(g), ".*subsample.*UNTRAINED.*pca.*UNTRAINED")
 
   inputs = mlr_tasks$get("iris")
   x = g$train(inputs)
   expect_task(x[[1]])
 
-  expect_output(print(g), "Graph with 2 PipeOps.*subsample.*list.*pca.*prcomp")
+  expect_output(print(g), "Graph with 2 PipeOps")
+  expect_output(print(g), ".*subsample.*list.*pca.*prcomp")
 
   out = g$predict(inputs)
   expect_task(x[[1]])
@@ -78,6 +79,7 @@ test_that("complex graph", {
       "Training debug3 with input list(input_1 = 3, input_2 = 5, input_3 = 5)"),
     info = paste0("'", lines, "'", collapse = "', '"))
 
+  skip_if_not_installed("igraph")
   pdf(file = NULL)  # don't show plot. It is annoying.
   biggraph$plot()
   dev.off()
@@ -149,6 +151,7 @@ test_that("input / output lists and naming", {
   # output should be debug2.3, debug3.1, debug3.2
   # (inputs and outputs in PipeOp order first, in channel order second)
 
+  skip_if_not_installed("igraph")
   pdf(file = NULL)  # don't show plot. It is annoying.
   gr$plot()
   dev.off()
@@ -212,6 +215,8 @@ test_that("edges that introduce loops cannot be added", {
   expect_error(g$add_edge("p2", "p1", 1, 1), "Cycle detected")
 
   expect_deep_clone(g, gclone)  # check that edges did not change
+
+
 })
 
 
@@ -220,7 +225,8 @@ test_that("assert_graph test", {
 
   gr2 = assert_graph(gr)
 
-  expect_error(expect_deep_clone(gr, gr2), class = "error", regexp = "addresses differ.*isn't true|addresses differ.*is not TRUE")
+  expect_error(expect_deep_clone(gr, gr2), class = "error",
+    regexp = "Expected.*addresses differ.*to be TRUE|addresses differ.*isn't true|addresses differ.*is not TRUE")
 
   gr2 = as_graph(gr, clone = TRUE)
 
@@ -232,7 +238,8 @@ test_that("assert_graph test", {
 
   po = PipeOpNOP$new()
 
-  expect_error(expect_deep_clone(po, po), class = "error", regexp = "addresses differ.*isn't true|addresses differ.*is not TRUE")
+  expect_error(expect_deep_clone(po, po), class = "error",
+    regexp = "Expected.*addresses differ.*to be TRUE|addresses differ.*isn't true|addresses differ.*is not TRUE")
 
   po2 = as_graph(po, clone = TRUE)$pipeops[[1]]
 
@@ -246,6 +253,7 @@ test_that("Empty Graph", {
 
   expect_output(print(Graph$new()), "^Empty Graph\\.$")
 
+  skip_if_not_installed("igraph")
   expect_output(Graph$new()$plot(), "^Empty Graph, not plotting\\.$")
 
   expect_equal(gunion(list()), Graph$new())
@@ -377,6 +385,7 @@ test_that("Graph with vararg input", {
 })
 
 test_that("single pipeop plot", {
+  skip_if_not_installed("igraph")
   imp_num = po("imputehist")
   graph = as_graph(imp_num)
 
@@ -450,4 +459,219 @@ test_that("help() call", {
       (po("scale") %>>% po("nop"))$help()
     )
   }
+})
+
+test_that("Same output into multiple channels does not cause a bug", {
+  PipeOpDebug = R6Class(
+    inherit = PipeOp,
+    public = list(
+      initialize = function(id = "debug", param_vals = list(), n) {
+        output = data.table(
+          name = paste0("output", seq_len(n)),
+          train = rep("numeric", times = n),
+          predict = rep("numeric", times = n)
+        )
+        input = data.table(name = "input", train = "numeric", predict = "numeric")
+        private$.n = n
+        super$initialize(
+          id = id,
+          param_set = ps(),
+          param_vals = param_vals,
+          input = input,
+          output = output
+        )
+      }
+    ),
+    private = list(
+      .n = NULL,
+      .train = function(inputs) {
+        # set the "wrong" names here, since we need to rely on PipeOp's train/predict to do
+        # the right thing here and ignore our names.
+        x = set_names(inputs$input, paste0("output", rev(inputs$input)))
+        as.list(x)
+      }
+    )
+  )
+
+  po1 = PipeOpDebug$new(n = 2L, id = "po1")
+  po2 = PipeOpDebug$new(n = 1L, id = "po2")
+  po3 = PipeOpDebug$new(n = 1L, id = "po3")
+  po4 = PipeOpDebug$new(n = 1L, id = "po4")
+  graph = Graph$new()
+  graph$add_pipeop(po1)
+  graph$add_pipeop(po2)
+  graph$add_pipeop(po3)
+  graph$add_pipeop(po4)
+  graph$add_edge("po1", "po2", "output1", "input")
+  graph$add_edge("po1", "po3", "output2", "input")
+  graph$add_edge("po1", "po4", "output2", "input")
+  res = graph$train(c(1, 2))
+  expect_true(res$po2.output1 == 1)
+  expect_true(res$po3.output1 == 2)
+  expect_true(res$po4.output1 == 2)
+})
+
+test_that("Graph with ambiguously named input", {
+  PipeOpDebugInname = R6Class(
+    inherit = PipeOp,
+    public = list(
+      initialize = function(id = "debug", inname = "input", param_vals = list()) {
+        output = data.table(
+          name = "output",
+          train = "numeric",
+          predict = "numeric"
+        )
+        input = data.table(
+          name = inname,
+          train = "numeric",
+          predict = "numeric"
+        )
+        super$initialize(
+          id = id,
+          param_set = ps(),
+          param_vals = param_vals,
+          input = input,
+          output = output
+        )
+      }
+    ),
+    private = list(
+      .train = function(inputs) {
+        list(inputs[[1]] * 10)
+      }
+    )
+  )
+
+  gr = Graph$new()$
+    add_pipeop(PipeOpDebugInname$new(id = "a", inname = "b.c"))$
+    add_pipeop(PipeOpDebugInname$new(id = "a.b", inname = "c"))
+
+  expect_equal(
+    gr$train(list(1, 2), single_input = FALSE),
+    list(a.output = 10, a.b.output = 20)
+  )
+
+  expect_error(gr$train(list(a.b.c = 1, a.b.c = 2), single_input = FALSE),
+    "duplicated names: a.b.c")
+
+})
+
+test_that("Graph with vararg input", {
+  PipeOpDebugVararg = R6Class(
+    inherit = PipeOp,
+    public = list(
+      initialize = function(id = "debugvararg", param_vals = list()) {
+        output = data.table(
+          name = "output",
+          train = "numeric",
+          predict = "numeric"
+        )
+        input = data.table(
+          name = c("input", "..."),
+          train = c("numeric", "numeric"),
+          predict = c("numeric", "numeric")
+        )
+        super$initialize(
+          id = id,
+          param_set = ps(),
+          param_vals = param_vals,
+          input = input,
+          output = output
+        )
+      }
+    ),
+    private = list(
+      .train = function(inputs) {
+        x = 1000 * inputs$input + sum(unlist(inputs[names(inputs) == "..."]))
+        list(output = x)
+      }
+    )
+  )
+
+  g1 <- Graph$new()$
+    add_pipeop(PipeOpDebugVararg$new())
+
+  expect_equal(g1$train(list(1, 2, 3), single_input = FALSE),
+    list(debugvararg.output = 1000 * 1 + 2 + 3))
+
+  expect_equal(g1$train(list(debugvararg.input = 1, debugvararg.... = 2), single_input = FALSE),
+    list(debugvararg.output = 1000 * 1 + 2))
+
+  expect_equal(g1$train(list(debugvararg.... = 2, debugvararg.input = 1), single_input = FALSE),
+    list(debugvararg.output = 1000 * 1 + 2))
+
+  expect_equal(g1$train(list(debugvararg.... = 2, debugvararg.input = 1, debugvararg.... = 3), single_input = FALSE),
+    list(debugvararg.output = 1000 * 1 + 2 + 3))
+
+  expect_error(g1$train(list(debugvararg.input = 1, debugvararg.... = 2, debugvararg.input = 3), single_input = FALSE),
+    "input that does not refer to vararg.*unique names")
+
+  g2 <- Graph$new()$
+    add_pipeop(PipeOpDebugVararg$new())$
+    add_pipeop(PipeOpDebugVararg$new(id = "debugvararg2"))
+
+  expect_error(g2$train(list(1, 2, 3, 4, 5), single_input = FALSE),
+    "more than one input")
+
+  # throw the error even when number of inputs == number of args given
+  expect_error(g2$train(list(1, 2, 3, 4), single_input = FALSE),
+    "more than one input")
+
+  expect_equal(g2$train(1), list(debugvararg.output = 1001, debugvararg2.output = 1001))
+
+  expect_equal(
+    g2$train(list(debugvararg.input = 1, debugvararg.... = 2, debugvararg2.input = 3, debugvararg2.... = 4), single_input = FALSE),
+    list(debugvararg.output = 1000 * 1 + 2, debugvararg2.output = 1000 * 3 + 4)
+  )
+
+  #multi-assignment to multi-vararg
+  expect_equal(
+    g2$train(list(debugvararg.... = 100, debugvararg2.... = 10000, debugvararg.input = 1, debugvararg2.... = 200, debugvararg.... = 2, debugvararg2.input = 3, debugvararg2.... = 4), single_input = FALSE),
+    list(debugvararg.output = 1000 * 1 + 100 + 2, debugvararg2.output = 10000 +1000 * 3 + 200 + 4)
+  )
+
+  expect_equal(
+    g2$train(list(debugvararg2.... = 10000, debugvararg.input = 1, debugvararg2.... = 200, debugvararg2.input = 3, debugvararg2.... = 4, debugvararg.... = 2), single_input = FALSE),
+    list(debugvararg.output = 1000 * 1 + 2, debugvararg2.output = 10000 + 1000 * 3 + 200 + 4)
+  )
+
+  g3 <- Graph$new()$
+    add_pipeop(PipeOpDebugVararg$new())$
+    add_pipeop(PipeOpDebugVararg$new(id = "debugvararg2"))$
+    add_pipeop(PipeOpCopy$new(3))$
+    add_edge("copy", "debugvararg", "output1", "...")$
+    add_edge("copy", "debugvararg2", "output1", "...")
+
+  expect_equal(g3$train(list(1, 2, 3), single_input = FALSE),
+    list(debugvararg.output = 1003, debugvararg2.output = 2003, copy.output2 = 3, copy.output3 = 3))
+
+  g3 <- Graph$new()$
+    add_pipeop(PipeOpDebugVararg$new())$
+    add_pipeop(PipeOpDebugVararg$new(id = "debugvararg2"))$
+    add_pipeop(PipeOpCopy$new(3))$
+    add_edge("copy", "debugvararg", "output1", "...")$
+    add_edge("copy", "debugvararg2", "output2", "...")
+
+  expect_equal(g3$train(list(1, 2, 3), single_input = FALSE),
+    list(debugvararg.output = 1003, debugvararg2.output = 2003, copy.output3 = 3))
+
+  g3 <- Graph$new()$
+    add_pipeop(PipeOpDebugVararg$new())$
+    add_pipeop(PipeOpDebugVararg$new(id = "debugvararg2"))$
+    add_pipeop(PipeOpCopy$new(3))$
+    add_edge("copy", "debugvararg", "output1", "...")$
+    add_edge("copy", "debugvararg", "output2", "...")$
+    add_edge("copy", "debugvararg2", "output1", "...")$
+    add_edge("copy", "debugvararg2", "output3", "...")
+
+  expect_equal(g3$train(list(1, 2, 3), single_input = FALSE),
+    list(debugvararg.output = 1006, debugvararg2.output = 2006))
+
+})
+
+test_that("Error when predicting with untrained Graph, #893", {
+  g = Graph$new()$
+    add_pipeop(PipeOpDebugBasic$new())
+
+  expect_error(g$predict(tsk("iris")), "Graph has not been trained yet")
 })

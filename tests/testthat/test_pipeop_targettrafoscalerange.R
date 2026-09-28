@@ -1,13 +1,14 @@
 context("PipeOpTargetTrafoScaleRange")
 
 test_that("PipeOpTargetTrafoScaleRange - basic properties", {
+  skip_if_not_installed("rpart")
   expect_pipeop_class(PipeOpTargetTrafoScaleRange, list(id = "po"))
 
   po = PipeOpTargetTrafoScaleRange$new()
 
   expect_pipeop(po)
 
-  task = mlr_tasks$get("boston_housing")
+  task = mlr_tasks$get("boston_housing_classic")
   train_out1 = po$train(list(task))
 
   x = task$data(cols = "medv")[[1L]]
@@ -48,9 +49,10 @@ test_that("PipeOpTargetTrafoScaleRange - basic properties", {
 })
 
 test_that("PipeOpTargetTrafoScaleRange - row use subsets", {
+  skip_if_not_installed("rpart")
   po = PipeOpTargetTrafoScaleRange$new()
 
-  task = mlr_tasks$get("boston_housing")
+  task = mlr_tasks$get("boston_housing_classic")
 
   dat_subset = task$data(1:50)
   x = dat_subset$medv
@@ -83,4 +85,32 @@ test_that("PipeOpTargetTrafoScaleRange - row use subsets", {
 
   expect_equivalent((predict_out1$truth - a) / b, predict_out2[[1L]]$truth)
   expect_equivalent((predict_out1$response - a) / b, predict_out2[[1L]]$response)
+})
+
+test_that("PipeOpTargetTrafoScaleRange - does not drop missing levels, #631", {
+  task = tsk("boston_housing")$filter(1:100)
+  op = po("targettrafoscalerange")
+  train_out = op$train(list(task))[["output"]]
+  predict_out = op$predict(list(task))[["output"]]
+  # train_out and predict_out should also know all levels
+  expect_equal(task$levels(), train_out$levels())
+  expect_equal(task$levels(), predict_out$levels())
+})
+
+test_that("PipeOpTargetTrafoScaleRange - transforms internal validation task", {
+  task = tsk("boston_housing")
+  task$internal_valid_task = 1:10
+
+  validation_task = task$internal_valid_task
+  po = PipeOpTargetTrafoScaleRange$new()
+
+  train_out = po$train(list(task))[["output"]]
+  predict_out = po$predict(list(validation_task))[["output"]]
+
+  cols = unname(unlist(train_out$col_roles[c("feature", "target")]))
+  expect_equal_data_table(
+    train_out$internal_valid_task$data(cols = cols),
+    predict_out$data(cols = cols),
+    ignore_col_order = TRUE
+  )
 })

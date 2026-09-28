@@ -1,7 +1,8 @@
 context("PipeOpFilter")
 
 test_that("PipeOpFilter", {
-  task = mlr_tasks$get("boston_housing")
+  skip_if_not_installed("mlr3filters")
+  task = mlr_tasks$get("boston_housing_classic")
 
   expect_datapreproc_pipeop_class(PipeOpFilter,
     list(filter = mlr3filters::FilterVariance$new(), param_vals = list(filter.frac = 0.5)), task = task,
@@ -15,10 +16,10 @@ test_that("PipeOpFilter", {
 
   expect_equal(po$id, mlr3filters::FilterVariance$new()$id)
 
-  expect_error(po$train(list(task)), "Exactly one of 'nfeat', 'frac', 'cutoff', or 'permuted' must be given.*none")
+  expect_error(po$train(list(task)), "Exactly one hyperparameter of 'filter.nfeat', 'filter.frac', 'filter.cutoff', or 'filter.permuted' must be given.*none")
 
   po$param_set$values = list(filter.nfeat = 1, filter.frac = 1, na.rm = TRUE)
-  expect_error(po$train(list(task)), "Exactly one of 'nfeat', 'frac', 'cutoff', or 'permuted' must be given.*nfeat, frac")
+  expect_error(po$train(list(task)), "Exactly one hyperparameter of 'filter.nfeat', 'filter.frac', 'filter.cutoff', or 'filter.permuted' must be given.*nfeat, frac")
 
   po$param_set$values = list(filter.nfeat = 1, na.rm = TRUE)
 
@@ -44,13 +45,33 @@ test_that("PipeOpFilter", {
   expect_set_equal(tt$feature_names, c(setdiff(task$feature_names, po$param_set$values$affect_columns(task)), "chas", "b", "age"))
 })
 
+test_that("PipeOpFilter resets the wrapped filter scores without a warning", {
+  skip_if_not_installed("mlr3filters")
+
+  task = tsk("iris")
+  po = PipeOpFilter$new(
+    mlr3filters::FilterVariance$new(),
+    param_vals = list(filter.nfeat = 1)
+  )
+
+  po$filter$calculate(task)
+  expect_length(po$filter$scores, length(task$feature_names))
+
+  expect_no_warning(po$train(list(task)))
+  expect_identical(
+    po$filter$scores,
+    structure(numeric(0), names = character(0))
+  )
+})
+
 
 test_that("PipeOpFilter parameters", {
+  skip_if_not_installed("mlr3filters")
 
   po = PipeOpFilter$new(mlr3filters::FilterVariance$new())
 
   expect_set_equal(c("filter.nfeat", "filter.frac", "filter.cutoff", "filter.permuted"),
-    grep("^filter\\.", names(po$param_set$params), value = TRUE))
+    grep("^filter\\.", po$param_set$ids(), value = TRUE))
 
   po = po$clone(deep = TRUE)  # cloning often breaks param connection
 
@@ -64,6 +85,7 @@ test_that("PipeOpFilter parameters", {
 
 
 test_that("PipeFilter permuted", {
+  skip_if_not_installed("mlr3filters")
   set.seed(1)
   N = 50
   task = tgen("2dnormals")$generate(N)

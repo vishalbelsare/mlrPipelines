@@ -49,6 +49,7 @@ test_that("PipeOpOVRUnite - basic properties", {
 })
 
 test_that("PipeOpOVRUnite- train and predict", {
+  skip_if_not_installed("rpart")
   # toy tasks that are splitted, trained and predicted manually
   feature = rep(c(1, 0), c(10, 20))
   dat1 = data.table(target = as.factor(rep(c("a", "rest"), c(10, 20))), feature = feature)
@@ -66,6 +67,8 @@ test_that("PipeOpOVRUnite- train and predict", {
     lrn$train(task)
     lrn$predict(task)
   })
+  # Need to first train before predicting
+  expect_list(po$train(list(as.Multiplicity(NULL))), len = 1, types = "null")
   pout = po$predict(list(as.Multiplicity(tin)))
   expect_prediction_classif(pout[[1]])
 
@@ -94,6 +97,7 @@ test_that("PipeOpOVRUnite- train and predict", {
 context("PipeOpOVRSplit and PipeOpOVRUnite")
 
 test_that("PipeOpOVRSplit and PipeOpOVRUnite - train and predict", {
+  skip_if_not_installed("rpart")
   # same toy task but now we compare the results to the automated Graph's results
   feature = rep(c(1, 0), c(10, 20))
   dat0 = data.table(target = as.factor(rep(c("a", "b", "c"), each = 10)), feature = feature)
@@ -110,6 +114,8 @@ test_that("PipeOpOVRSplit and PipeOpOVRUnite - train and predict", {
     lrn$train(task)
     lrn$predict(task)
   })
+  # Need to first train before predicting
+  po$train(list(as.Multiplicity(NULL)))
   pout_ref = po$predict(list(as.Multiplicity(tin)))
 
   gr = PipeOpOVRSplit$new() %>>% LearnerClassifRpart$new() %>>% PipeOpOVRUnite$new()
@@ -127,6 +133,7 @@ test_that("PipeOpOVRSplit and PipeOpOVRUnite - train and predict", {
 })
 
 test_that("PipeOpOVRSplit and PipeOpOVRUnite - task size", {
+  skip_if_not_installed("rpart")
   gr = PipeOpOVRSplit$new() %>>% LearnerClassifRpart$new() %>>% PipeOpOVRUnite$new()
   gr$train(tsk("iris")$filter(c(1:30, 51:80, 101:130)))
   prd = gr$predict(tsk("iris")$filter(c(1:30, 51:80, 101:130)))[[1]]

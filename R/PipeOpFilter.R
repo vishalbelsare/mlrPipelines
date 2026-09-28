@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_filter
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Feature filtering using a [`mlr3filters::Filter`] object, see the
@@ -16,10 +16,11 @@
 #' ```
 #' PipeOpFilter$new(filter, id = filter$id, param_vals = list())
 #' ```
+#'
 #' * `filter` :: [`Filter`][mlr3filters::Filter]\cr
 #'   [`Filter`][mlr3filters::Filter] used for feature filtering.
 #'  This argument is always cloned; to access the [`Filter`][mlr3filters::Filter] inside `PipeOpFilter` by-reference, use `$filter`.\cr
-#' * `id` :: `character(1)`
+#' * `id` :: `character(1)`\cr
 #'   Identifier of the resulting  object, defaulting to the `id` of the [`Filter`][mlr3filters::Filter] being used.
 #' * `param_vals` :: named `list`\cr
 #'   List of hyperparameter settings, overwriting the hyperparameter settings that would otherwise be set during construction. Default `list()`.
@@ -64,7 +65,7 @@
 #' instead the whole [`Task`][mlr3::Task] is used by `private$.get_state()` and subset internally.
 #'
 #' @section Fields:
-#' Fields inherited from [`PipeOpTaskPreproc`], as well as:
+#' Fields inherited from [`PipeOp`], as well as:
 #' * `filter` :: [`Filter`][mlr3filters::Filter]\cr
 #'   [`Filter`][mlr3filters::Filter] that is being used for feature filtering. Do *not* use this slot to get to the feature filtering scores
 #'   after training; instead, use `$state$scores`. Read-only.
@@ -79,9 +80,10 @@
 #' @template seealso_pipeopslist
 #' @include PipeOpTaskPreproc.R
 #' @export
-#' @examples
+#' @examplesIf mlr3misc::require_namespaces(c("mlr3filters", "rpart"), quietly = TRUE)
 #' library("mlr3")
 #' library("mlr3filters")
+#' \dontshow{data.table::setDTthreads(1)}
 #'
 #' # setup PipeOpFilter to keep the 5 most important
 #' # features of the spam task w.r.t. their AUC
@@ -113,16 +115,16 @@ PipeOpFilter = R6Class("PipeOpFilter",
     initialize = function(filter, id = filter$id, param_vals = list()) {
       assert_class(filter, "Filter")
       self$filter = filter$clone(deep = TRUE)
-      self$filter$param_set$set_id = ""
-      map(self$filter$param_set$params, function(p) p$tags = union(p$tags, "train"))
-      private$.outer_param_set = ParamSet$new(list(
-        ParamInt$new("nfeat", lower = 0, tags = "train"),
-        ParamDbl$new("frac", lower = 0, upper = 1, tags = "train"),
-        ParamDbl$new("cutoff", tags = "train"),
-        ParamInt$new("permuted", lower = 1, tags = "train")
-      ))
-      private$.outer_param_set$set_id = "filter"
-      super$initialize(id, alist(private$.outer_param_set, self$filter$param_set), param_vals = param_vals, tags = "feature selection")
+      for (pn in self$filter$param_set$ids()) {
+        self$filter$param_set$tags[[pn]] = union(self$filter$param_set$tags[[pn]] , "train")
+      }
+      private$.outer_param_set = ps(
+        nfeat = p_int(lower = 0, tags = "train"),
+        frac = p_dbl(lower = 0, upper = 1, tags = "train"),
+        cutoff = p_dbl(tags = "train"),
+        permuted = p_int(lower = 1, tags = "train")
+      )
+      super$initialize(id, alist(filter = private$.outer_param_set, self$filter$param_set), param_vals = param_vals, tags = "feature selection")
     }
   ),
   private = list(
@@ -130,11 +132,11 @@ PipeOpFilter = R6Class("PipeOpFilter",
 
     .get_state = function(task) {
       # reset filter on exit, the user should not even feel the temptation to not use the `$state`
-      on.exit({self$filter$scores = structure(numeric(0), .Names = character(0))})
+      on.exit({self$filter$scores = structure(numeric(0), names = character(0))})
       filtercrit = c("nfeat", "frac", "cutoff", "permuted")
       filtercrit = Filter(function(name) !is.null(private$.outer_param_set$values[[name]]), filtercrit)
       if (length(filtercrit) != 1) {
-        stopf("Exactly one of 'nfeat', 'frac', 'cutoff', or 'permuted' must be given. Instead given: %s",
+        stopf("Exactly one hyperparameter of 'filter.nfeat', 'filter.frac', 'filter.cutoff', or 'filter.permuted' must be given. Instead given: %s",
           if (length(filtercrit) == 0) "none" else str_collapse(filtercrit))
       }
       critvalue = private$.outer_param_set$values[[filtercrit]]
@@ -181,8 +183,9 @@ PipeOpFilter = R6Class("PipeOpFilter",
 
     .transform = function(task) {
       task$select(self$state$features)
-    }
+    },
+    .additional_phash_input = function() self$filter$hash
   )
 )
 
-mlr_pipeops$add("filter", PipeOpFilter, list(R6Class("Filter", public = list(id = "dummyfilter", param_set = ParamSet$new()))$new()))
+mlr_pipeops$add("filter", PipeOpFilter, list(R6Class("Filter", public = list(id = "dummyfilter", param_set = ps()))$new()))

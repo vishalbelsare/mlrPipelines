@@ -5,10 +5,10 @@
 \alias{PipeOpEncode}
 \title{Factor Encoding}
 \format{
-\code{\link{R6Class}} object inheriting from \code{\link{PipeOpTaskPreprocSimple}}/\code{\link{PipeOpTaskPreproc}}/\code{\link{PipeOp}}.
+\code{\link[R6:R6Class]{R6Class}} object inheriting from \code{\link{PipeOpTaskPreprocSimple}}/\code{\link{PipeOpTaskPreproc}}/\code{\link{PipeOp}}.
 }
 \description{
-Encodes columns of type \code{factor}, \code{character} and \code{ordered}.
+Encodes columns of type \code{factor} and \code{ordered}.
 
 Possible encodings are \code{"one-hot"} encoding, as well as encoding according to \code{stats::contr.helmert()}, \code{stats::contr.poly()},
 \code{stats::contr.sum()} and \code{stats::contr.treatment()}.
@@ -16,6 +16,8 @@ Newly created columns are named via pattern \verb{[column-name].[x]} where \code
 \code{"treatment"} encoding, and an integer sequence otherwise.
 
 Use the \code{\link{PipeOpTaskPreproc}} \verb{$affect_columns} functionality to only encode a subset of columns, or only encode columns of a certain type.
+
+\code{character}-type features can be encoded by converting them \code{factor} features first, using \code{\link[=mlr_graphs_convert_types]{ppl("convert_types", "character", "factor")}}.
 }
 \section{Construction}{
 
@@ -34,7 +36,7 @@ List of hyperparameter settings, overwriting the hyperparameter settings that wo
 
 Input and output channels are inherited from \code{\link{PipeOpTaskPreproc}}.
 
-The output is the input \code{\link[mlr3:Task]{Task}} with all affected \code{factor}, \code{character} or \code{ordered} parameters encoded according to the \code{method}
+The output is the input \code{\link[mlr3:Task]{Task}} with all affected \code{factor} and \code{ordered} columns encoded according to the \code{method}
 parameter.
 }
 
@@ -42,8 +44,8 @@ parameter.
 
 The \verb{$state} is a named \code{list} with the \verb{$state} elements inherited from \code{\link{PipeOpTaskPreproc}}, as well as:
 \itemize{
-\item \code{constrasts} :: named \code{list} of \code{matrix}\cr
-List of contrast matrices, one for each affected discrete feature. The rows of each matrix correspond to (training task) levels, the the
+\item \code{contrasts} :: named \code{list} of \code{matrix}\cr
+List of contrast matrices, one for each affected discrete feature. The rows of each matrix correspond to (training task) levels, the
 columns to the new columns that replace the old discrete feature. See \code{\link[stats:contrasts]{stats::contrasts}}.
 }
 }
@@ -67,6 +69,11 @@ Initialized to \code{"one-hot"}. One of:
 \section{Internals}{
 
 Uses the \code{\link[stats:contrasts]{stats::contrasts}} functions. This is relatively inefficient for features with a large number of levels.
+}
+
+\section{Fields}{
+
+Only fields inherited from \code{\link{PipeOp}}.
 }
 
 \section{Methods}{
@@ -97,30 +104,46 @@ poe$train(list(task))[[1]]$data()
 
 poe$param_set$values$method = "sum"
 poe$train(list(task))[[1]]$data()
+
+# converting character-columns
+data_chr = data.table::data.table(x = factor(letters[1:3]), y = letters[1:3])
+task_chr = TaskClassif$new("task_chr", data_chr, "x")
+
+goe = ppl("convert_types", "character", "factor") \%>>\% po("encode")
+
+goe$train(task_chr)[[1]]$data()
 }
 \seealso{
 https://mlr-org.com/pipeops.html
 
-Other PipeOps: 
+Other PipeOps:
+\code{\link{PipeOp}},
+\code{\link{PipeOpEncodePL}},
 \code{\link{PipeOpEnsemble}},
 \code{\link{PipeOpImpute}},
 \code{\link{PipeOpTargetTrafo}},
-\code{\link{PipeOpTaskPreprocSimple}},
 \code{\link{PipeOpTaskPreproc}},
-\code{\link{PipeOp}},
+\code{\link{PipeOpTaskPreprocSimple}},
+\code{\link{mlr_pipeops}},
+\code{\link{mlr_pipeops_adas}},
+\code{\link{mlr_pipeops_blsmote}},
 \code{\link{mlr_pipeops_boxcox}},
 \code{\link{mlr_pipeops_branch}},
 \code{\link{mlr_pipeops_chunk}},
 \code{\link{mlr_pipeops_classbalancing}},
 \code{\link{mlr_pipeops_classifavg}},
 \code{\link{mlr_pipeops_classweights}},
+\code{\link{mlr_pipeops_classweightsex}},
 \code{\link{mlr_pipeops_colapply}},
 \code{\link{mlr_pipeops_collapsefactors}},
 \code{\link{mlr_pipeops_colroles}},
 \code{\link{mlr_pipeops_copy}},
 \code{\link{mlr_pipeops_datefeatures}},
+\code{\link{mlr_pipeops_decode}},
 \code{\link{mlr_pipeops_encodeimpact}},
 \code{\link{mlr_pipeops_encodelmer}},
+\code{\link{mlr_pipeops_encodeplquantiles}},
+\code{\link{mlr_pipeops_encodepltree}},
 \code{\link{mlr_pipeops_featureunion}},
 \code{\link{mlr_pipeops_filter}},
 \code{\link{mlr_pipeops_fixfactors}},
@@ -134,13 +157,19 @@ Other PipeOps:
 \code{\link{mlr_pipeops_imputemode}},
 \code{\link{mlr_pipeops_imputeoor}},
 \code{\link{mlr_pipeops_imputesample}},
+\code{\link{mlr_pipeops_info}},
+\code{\link{mlr_pipeops_isomap}},
 \code{\link{mlr_pipeops_kernelpca}},
 \code{\link{mlr_pipeops_learner}},
+\code{\link{mlr_pipeops_learner_pi_cvplus}},
+\code{\link{mlr_pipeops_learner_quantiles}},
+\code{\link{mlr_pipeops_materialize}},
 \code{\link{mlr_pipeops_missind}},
 \code{\link{mlr_pipeops_modelmatrix}},
 \code{\link{mlr_pipeops_multiplicityexply}},
 \code{\link{mlr_pipeops_multiplicityimply}},
 \code{\link{mlr_pipeops_mutate}},
+\code{\link{mlr_pipeops_nearmiss}},
 \code{\link{mlr_pipeops_nmf}},
 \code{\link{mlr_pipeops_nop}},
 \code{\link{mlr_pipeops_ovrsplit}},
@@ -154,23 +183,26 @@ Other PipeOps:
 \code{\link{mlr_pipeops_removeconstants}},
 \code{\link{mlr_pipeops_renamecolumns}},
 \code{\link{mlr_pipeops_replicate}},
+\code{\link{mlr_pipeops_rowapply}},
+\code{\link{mlr_pipeops_scale}},
 \code{\link{mlr_pipeops_scalemaxabs}},
 \code{\link{mlr_pipeops_scalerange}},
-\code{\link{mlr_pipeops_scale}},
 \code{\link{mlr_pipeops_select}},
 \code{\link{mlr_pipeops_smote}},
+\code{\link{mlr_pipeops_smotenc}},
 \code{\link{mlr_pipeops_spatialsign}},
+\code{\link{mlr_pipeops_splines}},
 \code{\link{mlr_pipeops_subsample}},
 \code{\link{mlr_pipeops_targetinvert}},
 \code{\link{mlr_pipeops_targetmutate}},
 \code{\link{mlr_pipeops_targettrafoscalerange}},
 \code{\link{mlr_pipeops_textvectorizer}},
 \code{\link{mlr_pipeops_threshold}},
+\code{\link{mlr_pipeops_tomek}},
 \code{\link{mlr_pipeops_tunethreshold}},
 \code{\link{mlr_pipeops_unbranch}},
 \code{\link{mlr_pipeops_updatetarget}},
 \code{\link{mlr_pipeops_vtreat}},
-\code{\link{mlr_pipeops_yeojohnson}},
-\code{\link{mlr_pipeops}}
+\code{\link{mlr_pipeops_yeojohnson}}
 }
 \concept{PipeOps}

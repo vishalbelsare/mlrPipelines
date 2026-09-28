@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_chunk
-#' @format [`R6Class`] object inheriting from [`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOp`].
 #'
 #' @description
 #' Chunks its input into `outnum` chunks.
@@ -22,9 +22,9 @@
 #'   List of hyperparameter settings, overwriting the hyperparameter settings that would otherwise be set during construction. Default `list()`.
 #'
 #' @section Input and Output:
-#' [`PipeOpChunk`] has one input channel named `"input"`, taking a [`Task`][mlr3::Task] both during training and prediction.
+#' `PipeOpChunk` has one input channel named `"input"`, taking a [`Task`][mlr3::Task] both during training and prediction.
 #'
-#' [`PipeOpChunk`] has multiple output channels depending on the `options` construction argument, named `"output1"`, `"output2"`, ...
+#' `PipeOpChunk` has multiple output channels depending on the `options` construction argument, named `"output1"`, `"output2"`, ...
 #' All output channels produce (respectively disjoint, random) subsets of the input [`Task`][mlr3::Task] during training, and
 #' pass on the original [`Task`][mlr3::Task] during prediction.
 #'
@@ -64,9 +64,9 @@ PipeOpChunk = R6Class("PipeOpChunk",
   public = list(
     initialize = function(outnum, id = "chunk", param_vals = list()) {
       outnum = assert_int(outnum, lower = 1L)
-      ps = ParamSet$new(params = list(
-        ParamLgl$new("shuffle", tags = "train")
-      ))
+      ps = ps(
+        shuffle = p_lgl(tags = "train")
+      )
       ps$values = list(shuffle = TRUE)
       super$initialize(id,
         param_set = ps, param_vals = param_vals,
@@ -89,7 +89,8 @@ PipeOpChunk = R6Class("PipeOpChunk",
     },
     .predict = function(inputs) {
       rep(inputs, self$outnum)
-    }
+    },
+    .additional_phash_input = function() self$output$name
   )
 )
 

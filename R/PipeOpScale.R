@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_scale
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Centers all numeric features to mean = 0 (if `center` parameter is `TRUE`) and scales them
@@ -15,6 +15,7 @@
 #' ```
 #' PipeOpScale$new(id = "scale", param_vals = list())
 #' ```
+#'
 #' * `id` :: `character(1)`\cr
 #'   Identifier of resulting object, default `"scale"`.
 #' * `param_vals` :: named `list`\cr
@@ -32,7 +33,7 @@
 #' * `scale` :: `numeric`\cr
 #'   The value by which features are divided. 1 if `scale` is `FALSE`\cr
 #'   If `robust` is `FALSE`, this is the root mean square, defined as `sqrt(sum(x^2)/(length(x)-1))`, of each feature, possibly after centering.
-#'   If `robust` is `TRUE`, this is the mean absolute deviation multiplied by 1.4826 (see [stats::mad] of each feature, possibly after centering.
+#'   If `robust` is `TRUE`, this is the median absolute deviation multiplied by 1.4826 (see [stats::mad]) of each feature, possibly after centering.
 #'   This is 1 for features that are constant during training if `center` is `TRUE`, to avoid division-by-zero.
 #'
 #' @section Parameters:
@@ -49,6 +50,9 @@
 #' @section Internals:
 #' Imitates the [`scale()`][base::scale] function for `robust = FALSE` and alternatively subtracts the
 #' `median` and divides by [`mad`][stats::mad] for `robust = TRUE`.
+#'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
 #'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreproc`]/[`PipeOp`].
@@ -74,11 +78,11 @@ PipeOpScale = R6Class("PipeOpScale",
   inherit = PipeOpTaskPreproc,
   public = list(
     initialize = function(id = "scale", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamLgl$new("center", default = TRUE, tags = c("train", "scale")),
-        ParamLgl$new("scale", default = TRUE, tags = c("train", "scale")),
-        ParamLgl$new("robust", tags = c("train", "required"))
-      ))
+      ps = ps(
+        center = p_lgl(default = TRUE, tags = c("train", "scale")),
+        scale = p_lgl(default = TRUE, tags = c("train", "scale")),
+        robust = p_lgl(tags = c("train", "required"))
+      )
       ps$values = list(robust = FALSE)
       super$initialize(id = id, param_set = ps, param_vals = param_vals, feature_types = c("numeric", "integer"))
     }

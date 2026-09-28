@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_fixfactors
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Fixes factors of type `factor`, `ordered`: Makes sure the factor levels
@@ -15,6 +15,7 @@
 #' ```
 #' PipeOpFixFactors$new(id = "fixfactors", param_vals = list())
 #' ```
+#'
 #' * `id` :: `character(1)`\cr
 #'   Identifier of resulting object, default `"fixfactors"`.
 #' * `param_vals` :: named `list`\cr
@@ -38,22 +39,43 @@
 #' @section Internals:
 #' Changes factor levels of columns and attaches them with a new `data.table` backend and the virtual `cbind()` backend.
 #'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
+#'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
+#' @examples
+#' library("mlr3")
+#'
+#' # Reduced task with no entries for the installment_rate < 20 is defined
+#' task = tsk("german_credit")
+#' rows = task$row_ids[task$data()[, installment_rate != "< 20"]]
+#' reduced_task = task$clone(deep = TRUE)$filter(rows)
+#' levels(reduced_task$data()$installment_rate)
+#'
+#' # PipeOp is trained on the reduced task
+#' po = po("fixfactors")
+#' processed_task = preproc(reduced_task, po)
+#' levels(processed_task$data()$installment_rate)
+#' summary(processed_task$data()$installment_rate)
+#'
+#' predicted_task = preproc(task, po, predict = TRUE)
+#'
+#' # Predictions are made on the task without any missing data
+#' levels(predicted_task$data()$installment_rate)
+#' summary(predicted_task$data()$installment_rate)
 #' @family PipeOps
 #' @template seealso_pipeopslist
 #' @include PipeOpTaskPreproc.R
 #' @export
-#' @examples
-#' library("mlr3")
 PipeOpFixFactors = R6Class("PipeOpFixFactors",
   inherit = PipeOpTaskPreprocSimple,
   public = list(
     initialize = function(id = "fixfactors", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamLgl$new("droplevels", tags = c("train", "predict"))
-      ))
+      ps = ps(
+        droplevels = p_lgl(tags = c("train", "predict"))
+      )
       ps$values = list(droplevels = TRUE)
       super$initialize(id, param_set = ps, param_vals = param_vals, tags = "robustify", feature_types = c("factor", "ordered"))
     }
@@ -72,33 +94,25 @@ PipeOpFixFactors = R6Class("PipeOpFixFactors",
       dt = task$data(cols = names(self$state$levels))
 
       # check which levels are actually different during training and prediction
-      needs_adjustment = as.logical(imap(self$state$levels, function(lvx, id) {
+      needs_adjustment = imap_lgl(self$state$levels, function(lvx, id) {
         !identical(lvx, levels(dt[[id]]))
-      }))
+      })
 
       if (!any(needs_adjustment)) {
         return(task)
       }
 
-      changed_cols = as.data.table(imap(self$state$levels[needs_adjustment], function(lvx, id) {
+      changed_cols = imap_dtc(self$state$levels[needs_adjustment], function(lvx, id) {
         x = dt[[id]]
         if (is.ordered(x)) {
           ordered(x, levels = lvx)
         } else {
           factor(x, levels = lvx)
         }
-      }))
+      })
       task$select(setdiff(task$feature_names, colnames(changed_cols)))$cbind(changed_cols)
     }
   )
 )
 
 mlr_pipeops$add("fixfactors", PipeOpFixFactors)
-
-# FIXME: from mlr3; should probably go to mlr3misc
-ujoin = function (x, y, key) {
-  cn = setdiff(intersect(names(x), names(y)), key)
-  expr = parse(text = paste0("`:=`(", paste0(sprintf("%1$s=i.%1$s",
-    cn), collapse = ","), ")"))
-  x[y, eval(expr), on = key]
-}

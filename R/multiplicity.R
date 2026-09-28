@@ -36,7 +36,7 @@
 #'
 #' If a [`PipeOp`] is trained on a [`Multiplicity`], the `$state` slot is set to a [`Multiplicity`]
 #' as well; this [`Multiplicity`] contains the "original" `$state` resulting from each individual
-#' call of the [`PipeOP`] with the input [`Multiplicity`]'s content. If a [`PipeOp`] was trained
+#' call of the [`PipeOp`] with the input [`Multiplicity`]'s content. If a [`PipeOp`] was trained
 #' with a [`Multiplicity`], then the `predict()` argument must be a [`Multiplicity`] with the same
 #' number of elements.
 #'
@@ -56,7 +56,7 @@ print.Multiplicity = function(x, ...) {
   if (!length(x)) {
     cat("Empty Multiplicity.\n")
   } else {
-    cat("Multiplicity:\n")
+    cli_h2("Multiplicity:")
     print(unclass(x), ...)
   }
 }
@@ -114,4 +114,22 @@ multiplicity_nests_deeper_than = function(x, cutoff) {
     if (!is.na(ret)) break
   }
   ret
+}
+
+#' @export
+marshal_model.Multiplicity = function(model, inplace = FALSE, ...) {
+  maybe_marshaled = multiplicity_recurse(model, marshal_model, inplace = inplace, ...)
+  was_marshaled = unlist(multiplicity_recurse(maybe_marshaled, is_marshaled_model))
+  if (!any(was_marshaled)) {
+    return(model)
+  }
+  structure(list(
+    marshaled = maybe_marshaled,
+    packages = "mlr3pipelines"
+  ), class = c("Multiplicity_marshaled", "marshaled"))
+}
+
+#' @export
+unmarshal_model.Multiplicity_marshaled = function(model, inplace = FALSE, ...) {
+  multiplicity_recurse(model$marshaled, unmarshal_model, inplace = inplace, ...)
 }

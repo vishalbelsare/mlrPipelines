@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_encodeimpact
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Encodes columns of type `factor`, `character` and `ordered`.
@@ -21,7 +21,6 @@
 #' ```
 #' PipeOpEncodeImpact$new(id = "encodeimpact", param_vals = list())
 #' ```
-#'
 #' * `id` :: `character(1)`\cr
 #'   Identifier of resulting object, default `"encodeimpact"`.
 #' * `param_vals` :: named `list`\cr
@@ -29,7 +28,8 @@
 #'   otherwise be set during construction. Default `list()`.
 #'
 #' @section Input and Output Channels:
-#' Input and output channels are inherited from [`PipeOpTaskPreproc`].
+#' Input and output channels are inherited from [`PipeOpTaskPreproc`]. Instead of a [`Task`][mlr3::Task], a
+#' [`TaskSupervised`][mlr3::TaskSupervised] is used as input and output during training and prediction.
 #'
 #' The output is the input [`Task`][mlr3::Task] with all affected `factor`, `character` or
 #' `ordered` parameters encoded.
@@ -43,6 +43,7 @@
 #'   this feature level on each *outcome level*.
 #'
 #' @section Parameters:
+#' The parameters are the parameters inherited from [`PipeOpTaskPreproc`], as well as:
 #' * `smoothing`  :: `numeric(1)` \cr
 #'   A finite positive value used for smoothing. Mostly relevant for [classification Tasks][mlr3::TaskClassif] if
 #'   a factor does not coincide with a target factor level (and would otherwise give an infinite logit value).
@@ -53,8 +54,11 @@
 #' @section Internals:
 #' Uses Laplace smoothing, mostly to avoid infinite values for [classification Task][mlr3::TaskClassif].
 #'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
+#'
 #' @section Methods:
-#' Only methods inherited [`PipeOpTaskPreproc`]/[`PipeOp`].
+#' Only methods inherited [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @examples
 #' library("mlr3")
@@ -77,17 +81,19 @@ PipeOpEncodeImpact = R6Class("PipeOpEncodeImpact",
   inherit = PipeOpTaskPreprocSimple,
   public = list(
     initialize = function(id = "encodeimpact", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamDbl$new("smoothing", 0, Inf, tags = c("train", "required")),
-        ParamLgl$new("impute_zero", tags = c("train", "required"))
-      ))
+      ps = ps(
+        smoothing = p_dbl(0, Inf, tags = c("train", "required")),
+        impute_zero = p_lgl(tags = c("train", "required"))
+      )
       ps$values = list(smoothing = 1e-4, impute_zero = FALSE)
-      super$initialize(id, param_set = ps, param_vals = param_vals, tags = "encode", feature_types = c("factor", "ordered"))
+      super$initialize(id, param_set = ps, param_vals = param_vals, task_type = "TaskSupervised", tags = "encode",
+        feature_types = c("factor", "ordered"))
     }
   ),
   private = list(
 
     .get_state_dt = function(dt, levels, target) {
+      # FIXME: Handle non-Regr / non-Classif Tasks that inherit from TaskSupervised, #913
       task_type = if (is.numeric(target)) "regr" else "classif"
       state = list()
 

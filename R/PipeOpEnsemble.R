@@ -1,7 +1,7 @@
 #' @title Ensembling Base Class
 #'
 #' @usage NULL
-#' @format Abstract [`R6Class`] inheriting from [`PipeOp`].
+#' @format Abstract [`R6Class`][R6::R6Class] inheriting from [`PipeOp`].
 #'
 #' @description
 #' Parent class for [`PipeOp`]s that aggregate predictions. Implements the `private$.train()` and `private$.predict()` methods necessary
@@ -10,7 +10,7 @@
 #' @section Construction:
 #' Note: This object is typically constructed via a derived class, e.g. [`PipeOpClassifAvg`] or [`PipeOpRegrAvg`].
 #' ```
-#' PipeOpEnsemble$new(innum = 0, collect_multiplicity = FALSE, id, param_set = ParamSet$new(), param_vals = list(), packages = character(0), prediction_type = "Prediction")
+#' PipeOpEnsemble$new(innum = 0, collect_multiplicity = FALSE, id, param_set = ps(), param_vals = list(), packages = character(0), prediction_type = "Prediction")
 #' ```
 #'
 #' * `innum` :: `numeric(1)`\cr
@@ -35,11 +35,11 @@
 #'   `private$.train()` and `private$.predict()`.
 #'
 #' @section Input and Output Channels:
-#' [`PipeOpEnsemble`] has multiple input channels depending on the `innum` construction argument, named `"input1"`, `"input2"`, ...
+#' `PipeOpEnsemble` has multiple input channels depending on the `innum` construction argument, named `"input1"`, `"input2"`, ...
 #' if `innum` is nonzero; if `innum` is 0, there is only one *vararg* input channel named `"..."`.
 #' All input channels take only `NULL` during training and take a [`Prediction`][mlr3::Prediction] during prediction.
 #'
-#' [`PipeOpEnsemble`] has one output channel named `"output"`, producing `NULL` during training and a [`Prediction`][mlr3::Prediction] during prediction.
+#' `PipeOpEnsemble` has one output channel named `"output"`, producing `NULL` during training and a [`Prediction`][mlr3::Prediction] during prediction.
 #'
 #' The output during prediction is in some way a weighted averaged representation of the input.
 #'
@@ -52,12 +52,12 @@
 #'   length equal to the number of connected inputs. Initialized to 1 (equal weights).
 #'
 #' @section Internals:
-#' The commonality of ensemble methods using [`PipeOpEnsemble`] is that they take a `NULL`-input during training and save an empty `$state`. They can be
+#' The commonality of ensemble methods using `PipeOpEnsemble` is that they take a `NULL`-input during training and save an empty `$state`. They can be
 #' used following a set of [`PipeOpLearner`] [`PipeOp`]s to perform (possibly weighted) prediction averaging. See e.g.
 #' [`PipeOpClassifAvg`] and [`PipeOpRegrAvg`] which both inherit from this class.
 #'
 #' Should it be necessary to use the output of preceding [`Learner`][mlr3::Learner]s
-#' during the "training" phase, then [`PipeOpEnsemble`] should not be used. In fact, if training time behaviour of a [`Learner`][mlr3::Learner] is important, then
+#' during the "training" phase, then `PipeOpEnsemble` should not be used. In fact, if training time behaviour of a [`Learner`][mlr3::Learner] is important, then
 #' one should use a [`PipeOpLearnerCV`] instead of a [`PipeOpLearner`], and the ensemble can be created with a [`Learner`][mlr3::Learner] encapsulated by a [`PipeOpLearner`].
 #' See [`LearnerClassifAvg`] and [`LearnerRegrAvg`] for examples.
 #'
@@ -82,9 +82,9 @@
 PipeOpEnsemble = R6Class("PipeOpEnsemble",
   inherit = PipeOp,
   public = list(
-    initialize = function(innum = 0, collect_multiplicity = FALSE, id, param_set = ParamSet$new(), param_vals = list(), packages = character(0), prediction_type = "Prediction", tags = NULL) {
+    initialize = function(innum = 0, collect_multiplicity = FALSE, id, param_set = ps(), param_vals = list(), packages = character(0), prediction_type = "Prediction", tags = NULL) {
       assert_integerish(innum, lower = 0)
-      param_set$add(ParamUty$new("weights", custom_check = check_weights(innum), tags = "predict"))
+      param_set = c(param_set, ps(weights = p_uty(check_weights(innum), tags = "predict")))
       param_set$values$weights = 1
       inname = if (innum) rep_suffix("input", innum) else "..."
       intype = c("NULL", prediction_type)
@@ -129,7 +129,18 @@ PipeOpEnsemble = R6Class("PipeOpEnsemble",
 
       list(private$weighted_avg_predictions(inputs, weights, row_ids, truth))
     },
-    .collect = NULL
+    .collect = NULL,
+    .additional_phash_input = function() {
+      retval = list(private$.collect, self$input$name)
+      if (is.null(self$initialize)) return(retval)
+      initformals <- names(formals(args(self$initialize)))
+      if (!test_subset(initformals, c("id", "param_vals", "innum", "collect_multiplicity", "..."))) {
+        warningf("PipeOp %s has construction arguments besides 'id', 'param_vals', 'innum', 'collect_multiplicity' or '...' but .additional_phash_input was not overloaded.
+
+This warning will become an error in the future.", class(self)[[1]], class(self)[[1]])
+      }
+      retval
+    }
   )
 )
 
@@ -166,6 +177,25 @@ weighted_matrix_sum = function(matrices, weights) {
   }
   accmat
 }
+
+# Weighted log-opinion pool (geometric) aggregation of probability matrices
+# Rows = samples, columns = classes. Each matrix must have the same shape.
+# @param matrices list of matrices: per-learner probabilities
+# @param weights numeric: weights, same length as `matrices` (assumed to sum to 1 upstream)
+# @param epsilon numeric(1): small positive constant to clamp probabilities before log
+# @return matrix: row-normalized aggregated probabilities (same shape as inputs)
+weighted_matrix_logpool = function(matrices, weights, epsilon = 1e-12) {
+  assert_list(matrices, types = "matrix", min.len = 1)
+  assert_numeric(weights, len = length(matrices), any.missing = FALSE, finite = TRUE)
+  assert_number(epsilon, lower = 0, upper = 1)
+  acc = weights[1] * log(pmax(matrices[[1]], epsilon))
+  for (idx in seq_along(matrices)[-1]) {
+    acc = acc + weights[idx] * log(pmax(matrices[[idx]], epsilon))
+  }
+  P = exp(acc)
+  sweep(P, 1L, rowSums(P), "/")
+}
+
 
 # For a set of n `factor` vectors each of length l with the same k levels and a
 # numeric weight vector of length n, returns a matrix of dimension l times k.

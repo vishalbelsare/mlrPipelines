@@ -2,7 +2,8 @@ context("Typecheck")
 
 
 test_that("utility function works", {
-  expect_equal(get_r6_inheritance("data.table"), NULL)
+  skip_if_not_installed("rpart")
+  expect_null(get_r6_inheritance("data.table"))
 
   expect_equal(get_r6_inheritance("PipeOp"), "PipeOp")
 
@@ -182,6 +183,7 @@ test_that("Autoconversion for pipeops works", {
 
 
 test_that("R6 inheritance inference works with packages that are not loaded", {
+  skip_if_not_installed("ranger")
   skip_if_not_installed("mlr3learners")
   skip_on_cran()
   library("mlr3learners")

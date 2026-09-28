@@ -24,7 +24,7 @@
 #'
 #' @return [`Graph`]
 #' @export
-#' @examples
+#' @examplesIf requireNamespace("rpart")
 #' library("mlr3")
 #'
 #' tt = pipeline_targettrafo(PipeOpLearner$new(LearnerRegrRpart$new()))

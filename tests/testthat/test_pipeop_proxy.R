@@ -1,5 +1,5 @@
 context("PipeOpProxy")
-
+skip_on_cran()
 test_that("PipeOpProxy - basic properties", {
   task = mlr_tasks$get("iris")
   pop = PipeOpProxy$new(param_vals = list(content = PipeOpNOP$new()))
@@ -94,6 +94,7 @@ Training debug2 with input list\\(input_1 = 2\\)$")
 Predicting debug2 with input list\\(input_1 = 4\\) and state list\\(input_1 = 2\\)$")
 
 
+  skip_if_not_installed("fastICA")
   # ---------
   # NOP | feature union | NOP; feature union has vararg
 
@@ -119,6 +120,7 @@ Training debug2 with input list\\(input_1 = 2\\)$")
 
 
 test_that("Cloning as expected", {
+  skip_if_not_installed("rpart")
 
   gr = PipeOpProxy$new() %>>% LearnerClassifRpart$new()
 
@@ -172,8 +174,16 @@ test_that("Cloning as expected", {
 
   lg2 = lg$clone(deep = TRUE)
 
+  expect_false(identical(
+    lg$state$param_vals$proxy.content,
+    lg2$state$param_vals$proxy.content
+  ))
   expect_deep_clone(lg, lg2)
 
   expect_deep_clone(lg$param_set$values$proxy.content, lg2$param_set$values$proxy.content)
+
+  original_center = lg$state$param_vals$proxy.content$param_set$values$center
+  lg2$state$param_vals$proxy.content$param_set$values$center = !original_center
+  expect_identical(lg$state$param_vals$proxy.content$param_set$values$center, original_center)
 
 })

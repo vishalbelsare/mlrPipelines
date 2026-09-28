@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_modelmatrix
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Transforms columns using a given `formula` using the [stats::model.matrix()] function.
@@ -35,6 +35,9 @@
 #' @section Internals:
 #' Uses the [`model.matrix()`][stats::model.matrix()] function.
 #'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
+#'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
@@ -59,9 +62,9 @@ PipeOpModelMatrix = R6Class("PipeOpModelMatrix",
   inherit = PipeOpTaskPreprocSimple,
   public = list(
     initialize = function(id = "modelmatrix", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamUty$new("formula", tags = c("train", "predict"), custom_check = check_formula)
-      ))
+      ps = ps(
+        formula = p_uty(tags = c("train", "predict"), custom_check = check_formula)
+      )
       super$initialize(id, param_set = ps, param_vals = param_vals, packages = "stats")
     }
   ),

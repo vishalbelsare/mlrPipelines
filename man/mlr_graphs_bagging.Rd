@@ -5,7 +5,13 @@
 \alias{pipeline_bagging}
 \title{Create a bagging learner}
 \usage{
-pipeline_bagging(graph, iterations = 10, frac = 0.7, averager = NULL)
+pipeline_bagging(
+  graph,
+  iterations = 10,
+  frac = 0.7,
+  averager = NULL,
+  replace = FALSE
+)
 }
 \arguments{
 \item{graph}{\code{\link{PipeOp}} | \code{\link{Graph}} \cr
@@ -27,11 +33,17 @@ in order to perform simple averaging of classification and regression
 predictions respectively.
 If \code{NULL} (default), no averager is added to the end of the graph.
 Note that setting \code{collect_multipliciy = TRUE} during construction of the averager is required.}
+
+\item{replace}{\code{logical(1)} \cr
+Whether to sample with replacement.
+Default \code{FALSE}.}
 }
 \value{
 \code{\link{Graph}}
 }
 \description{
+Deprecated in favor of \code{\link[=pipeline_bag]{pipeline_bag()}} (\code{ppl("bag")}), which has different defaults.
+
 Creates a \code{\link{Graph}} that performs bagging for a supplied graph.
 This is done as follows:
 \itemize{
@@ -44,11 +56,18 @@ This is done as follows:
 All input arguments are cloned and have no references in common with the returned \code{\link{Graph}}.
 }
 \examples{
+\dontshow{if (requireNamespace("rpart")) withAutoprint(\{ # examplesIf}
 \donttest{
 library(mlr3)
 lrn_po = po("learner", lrn("regr.rpart"))
 task = mlr_tasks$get("boston_housing")
 gr = pipeline_bagging(lrn_po, 3, averager = po("regravg", collect_multiplicity = TRUE))
-resample(task, GraphLearner$new(gr), rsmp("holdout"))
+resample(task, GraphLearner$new(gr), rsmp("holdout"))$aggregate()
+
+# The original bagging method uses boosting by sampling with replacement.
+gr = ppl("bagging", lrn_po, frac = 1, replace = TRUE,
+  averager = po("regravg", collect_multiplicity = TRUE))
+resample(task, GraphLearner$new(gr), rsmp("holdout"))$aggregate()
 }
+\dontshow{\}) # examplesIf}
 }

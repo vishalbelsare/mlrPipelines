@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_randomresponse
-#' @format [`R6Class`] object inheriting from [`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOp`].
 #'
 #' @description
 #' Takes in a [`Prediction`][mlr3::Prediction] of `predict_type` `"prob"`
@@ -62,7 +62,7 @@
 #' @template seealso_pipeopslist
 #' @include PipeOp.R
 #' @export
-#' @examples
+#' @examplesIf requireNamespace("rpart")
 #' library(mlr3)
 #' library(mlr3learners)
 #'
@@ -83,11 +83,10 @@ PipeOpRandomResponse = R6Class("PipeOpRandomResponse",
   inherit = PipeOp,
   public = list(
     initialize = function(id = "randomresponse", param_vals = list(), packages = character(0L)) {
-      ps = ParamSet$new(params = list(
-        ParamUty$new("rdistfun", tags = c("predict", "required"), custom_check = function(x) {
+      ps = ps(
+        rdistfun = p_uty(tags = c("predict", "required"), custom_check = crate(function(x) {
           check_function(x, args = c("n", "mean", "sd"))
-        })
-        )
+        }))
       )
       ps$values = list(rdistfun = stats::rnorm)
       super$initialize(id = id, param_set = ps, param_vals = param_vals, packages = packages,
@@ -123,7 +122,8 @@ PipeOpRandomResponse = R6Class("PipeOpRandomResponse",
       type = prediction$task_type
       list(get(mlr_reflections$task_types[type, mult = "first"]$prediction)$new(row_ids = prediction$row_ids,
         truth = prediction$truth, response = response))
-    }
+    },
+    .additional_phash_input = function() NULL
   )
 )
 

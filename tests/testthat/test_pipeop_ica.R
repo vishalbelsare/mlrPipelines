@@ -1,21 +1,15 @@
 context("PipeOpICA")
 
 test_that("PipeOpICA - basic properties", {
+  skip_if_not_installed("fastICA")
   task = mlr_tasks$get("iris")
 
   expect_datapreproc_pipeop_class(PipeOpICA, task = task,
     deterministic_train = FALSE)
-
-  op = PipeOpICA$new()
-  expect_pipeop(op)
-  set.seed(1234)
-  result = op$train(list(task))
-
-  expect_task(result[[1]])
-  expect_equal(result[[1]]$data(), op$predict(list(task))[[1]]$data())
 })
 
 test_that("PipeOpICA - compare to fastICA", {
+  skip_if_not_installed("fastICA")
   # Default parameters
   task = mlr_tasks$get("iris")
   op = PipeOpICA$new()

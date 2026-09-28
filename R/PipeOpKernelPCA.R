@@ -1,11 +1,11 @@
-#' @title Kernelized Principle Component Analysis
+#' @title Kernelized Principal Component Analysis
 #'
 #' @usage NULL
 #' @name mlr_pipeops_kernelpca
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
-#' Extracts kernel principle components from data. Only affects numerical features.
+#' Extracts kernel principal components from data. Only affects numerical features.
 #' See [kernlab::kpca] for details.
 #'
 #' @section Construction:
@@ -48,10 +48,13 @@
 #' @section Internals:
 #' Uses the [`kpca()`][kernlab::kpca] function.
 #'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
+#'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
-#' @examples
+#' @examplesIf requireNamespace("kernlab")
 #' library("mlr3")
 #'
 #' task = tsk("iris")
@@ -67,14 +70,14 @@ PipeOpKernelPCA = R6Class("PipeOpKernelPCA",
   inherit = PipeOpTaskPreproc,
   public = list(
     initialize = function(id = "kernelpca", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamFct$new("kernel", default = "rbfdot", levels = c("rbfdot", "polydot",
+      ps = ps(
+        kernel = p_fct(default = "rbfdot", levels = c("rbfdot", "polydot",
           "vanilladot", "tanhdot", "laplacedot", "besseldot", "anovadot", "splinedot"), tags = c("train", "kpca")),
-        ParamUty$new("kpar", tags = c("train", "kpca")),
-        ParamInt$new("features", default = 0, lower = 0, tags = c("train", "kpca")),
-        ParamDbl$new("th", default = 1e-04, lower = 0, tags = c("train", "kpca")),
-        ParamUty$new("na.action", default = stats::na.omit, tags = c("train", "kpca"))
-      ))
+        kpar = p_uty(tags = c("train", "kpca")),
+        features = p_int(default = 0, lower = 0, tags = c("train", "kpca")),
+        th = p_dbl(default = 1e-04, lower = 0, tags = c("train", "kpca")),
+        na.action = p_uty(default = stats::na.omit, tags = c("train", "kpca"))
+      )
       super$initialize(id, param_set = ps, param_vals = param_vals,
         packages = "kernlab", feature_types = c("numeric", "integer"))
     }

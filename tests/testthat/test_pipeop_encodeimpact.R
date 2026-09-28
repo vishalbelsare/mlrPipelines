@@ -1,7 +1,7 @@
 context("PipeOpEncodeImpact")
 
 test_that("PipeOpEncodeImpact", {
-  task = mlr_tasks$get("boston_housing")
+  task = mlr_tasks$get("boston_housing_classic")
 
   chaslevels = task$levels()$chas
   townlevels = task$levels()$town
@@ -15,7 +15,6 @@ test_that("PipeOpEncodeImpact", {
   expect_datapreproc_pipeop_class(PipeOpEncodeImpact, task = mlr_tasks$get("iris"))
 
   op = PipeOpEncodeImpact$new()
-  expect_pipeop(op)
 
   nt = train_pipeop(op, inputs = list(task))[[1L]]
   fn = nt$feature_names
@@ -120,7 +119,7 @@ test_that("PipeOpImpactEncode on Regression", {
   op = PipeOpEncodeImpact$new()
   op$param_set$values$smoothing = 0
 
-  expect_equal(op$train(list(testtask))[[1]]$data(), expect, ignore.col.order = TRUE)
+  expect_equal_data_table(op$train(list(testtask))[[1]]$data(), expect, ignore_col_order = TRUE)
 
 
   expect_equal(op$state$impact$a, t(t(c(a = 0, b = 0, .TEMP.MISSING = NA))))
@@ -131,7 +130,7 @@ test_that("PipeOpImpactEncode on Regression", {
 
   selector = as_graph(po("select", selector = selector_type("numeric")))
 
-  expect_equal(unname((selector %>>% op)$train(tsk("boston_housing"))), unname(selector$train(tsk("boston_housing"))))
+  expect_equal(unname((selector %>>% op)$train(tsk("boston_housing_classic"))), unname(selector$train(tsk("boston_housing_classic"))))
 
 
   op$param_set$values$smoothing = 1e-10
@@ -148,17 +147,17 @@ test_that("PipeOpImpactEncode on Regression", {
   expectdf2 = expect
   expectdf2$b[6] = 0
 
-  expect_equal(op$predict(list(testtask2))[[1]]$data(), expectdf2, ignore.col.order = TRUE)
+  expect_equal_data_table(op$predict(list(testtask2))[[1]]$data(), expectdf2, ignore_col_order = TRUE)
 
   encoded = op$train(list(testtask2))[[1]]$data()
 
-  expect_false(any(is.na(encoded)))
+  expect_false(anyNA(encoded))
   expect_equal(as.numeric(as.matrix(encoded)[c(11, 18)]), c(0, 0))
 
   expectdf3 = expect
   expectdf3$b = c(-2 / 3, 0.5, 0.5, -2 / 3, -2 / 3, 0)
 
-  expect_equal(encoded, expectdf3, ignore.col.order = TRUE)
+  expect_equal_data_table(encoded, expectdf3, ignore_col_order = TRUE)
 
 
   op$param_set$values$impute_zero = FALSE

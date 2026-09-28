@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_spatialsign
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Normalizes the data row-wise. This is a natural generalization of the "sign" function to higher dimensions.
@@ -22,7 +22,6 @@
 #'
 #' The output is the input [`Task`][mlr3::Task] with all affected numeric features replaced by their normalized versions.
 #'
-#'
 #' @section State:
 #' The `$state` is a named `list` with the `$state` elements inherited from [`PipeOpTaskPreproc`].
 #'
@@ -33,6 +32,9 @@
 #' * `norm` :: `numeric(1)` \cr
 #'  Norm to use. Rows are scaled to `sum(x^norm)^(1/norm) == length` for finite `norm`, or to `max(abs(x)) == length`
 #'  if `norm` is `Inf`. Default is 2.
+#'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
 #'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
@@ -55,10 +57,10 @@ PipeOpSpatialSign = R6Class("PipeOpSpatialSign",
   inherit = PipeOpTaskPreprocSimple,
   public = list(
     initialize = function(id = "spatialsign", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamDbl$new("length", tags = c("train", "predict"), lower = 0),
-        ParamDbl$new("norm", tags = c("train", "predict"), lower = 0)
-      ))
+      ps = ps(
+        length = p_dbl(tags = c("train", "predict"), lower = 0),
+        norm = p_dbl(tags = c("train", "predict"), lower = 0)
+      )
       ps$values = list(norm = 2, length = 1)
       super$initialize(id, param_set = ps, param_vals = param_vals, feature_types = c("numeric", "integer"))
     }

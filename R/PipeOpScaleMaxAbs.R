@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_scalemaxabs
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreprocSimple`]/[`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
 #' Scales the numeric data columns so their maximum absolute value is `maxabs`,
@@ -54,9 +54,9 @@ PipeOpScaleMaxAbs = R6Class("PipeOpScaleMaxAbs",
   inherit = PipeOpTaskPreprocSimple,
   public = list(
     initialize = function(id = "scalemaxabs", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamDbl$new("maxabs", lower = 0, tags = c("required", "train", "predict"))
-      ))
+      ps = ps(
+        maxabs = p_dbl(lower = 0, tags = c("required", "train", "predict"))
+      )
       ps$values = list(maxabs = 1)
       super$initialize(id, param_set = ps, param_vals = param_vals, feature_types = c("numeric", "integer"))
     }
@@ -64,7 +64,7 @@ PipeOpScaleMaxAbs = R6Class("PipeOpScaleMaxAbs",
   private = list(
 
     .get_state_dt = function(dt, levels, target) {
-      lapply(dt, function(x){
+      lapply(dt, function(x) {
         s = max(abs(range(x, na.rm = TRUE, finite = TRUE)))
         if (s == 0) {
           s = 1
@@ -74,8 +74,8 @@ PipeOpScaleMaxAbs = R6Class("PipeOpScaleMaxAbs",
     },
 
     .transform_dt = function(dt, levels) {
-      for (i in seq_along(dt)) {
-        dt[[i]] = dt[[i]] / self$state[[i]] * self$param_set$values$maxabs
+      for (j in seq_along(dt)) {
+        set(dt, j = j, value = dt[[j]] / self$state[[j]] * self$param_set$values$maxabs)
       }
       dt
     }

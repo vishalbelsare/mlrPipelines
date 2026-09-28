@@ -14,7 +14,7 @@
 #'   [classification Prediction][mlr3::PredictionClassif] during prediction.
 #' @return [`Graph`]
 #' @export
-#' @examples
+#' @examplesIf requireNamespace("rpart")
 #' library("mlr3")
 #'
 #' task = tsk("wine")

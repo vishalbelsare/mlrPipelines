@@ -1,11 +1,11 @@
-#' @title Principle Component Analysis
+#' @title Principal Component Analysis
 #'
 #' @usage NULL
 #' @name mlr_pipeops_pca
-#' @format [`R6Class`] object inheriting from [`PipeOpTaskPreproc`]/[`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
 #' @description
-#' Extracts principle components from data. Only affects numerical features.
+#' Extracts principal components from data. Only affects numerical features.
 #' See [stats::prcomp()] for details.
 #'
 #' @section Construction:
@@ -47,6 +47,9 @@
 #' @section Internals:
 #' Uses the [`prcomp()`][stats::prcomp] function.
 #'
+#' @section Fields:
+#' Only fields inherited from [`PipeOp`].
+#'
 #' @section Methods:
 #' Only methods inherited from [`PipeOpTaskPreproc`]/[`PipeOp`].
 #'
@@ -68,11 +71,11 @@ PipeOpPCA = R6Class("PipeOpPCA",
   inherit = PipeOpTaskPreproc,
   public = list(
     initialize = function(id = "pca", param_vals = list()) {
-      ps = ParamSet$new(params = list(
-        ParamLgl$new("center", default = TRUE, tags = c("train", "pca")),
-        ParamLgl$new("scale.", default = FALSE, tags = c("train", "pca")),
-        ParamInt$new("rank.", default = NULL, lower = 1, upper = Inf, special_vals = list(NULL), tags = c("train", "pca"))
-      ))
+      ps = ps(
+        center = p_lgl(default = TRUE, tags = c("train", "pca")),
+        scale. = p_lgl(default = FALSE, tags = c("train", "pca")),
+        rank. = p_int(default = NULL, lower = 1, upper = Inf, special_vals = list(NULL), tags = c("train", "pca"))
+      )
       super$initialize(id, param_set = ps, param_vals = param_vals, feature_types = c("numeric", "integer"))
     }
   ),

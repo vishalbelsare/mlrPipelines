@@ -2,7 +2,7 @@
 #'
 #' @usage NULL
 #' @name mlr_pipeops_nop
-#' @format [`R6Class`] object inheriting from [`PipeOp`].
+#' @format [`R6Class`][R6::R6Class] object inheriting from [`PipeOp`].
 #'
 #' @description
 #' Simply pushes the input forward.
@@ -18,18 +18,18 @@
 #'   List of hyperparameter settings, overwriting the hyperparameter settings that would otherwise be set during construction. Default `list()`.
 #'
 #' @section Input and Output Channels:
-#' [`PipeOpNOP`] has one input channel named `"input"`, taking any input (`"*"`) both during training and prediction.
+#' `PipeOpNOP` has one input channel named `"input"`, taking any input (`"*"`) both during training and prediction.
 #'
-#' [`PipeOpNOP`] has one output channel named `"output"`, producing the object given as input (`"*"`) without changes.
+#' `PipeOpNOP` has one output channel named `"output"`, producing the object given as input (`"*"`) without changes.
 #'
 #' @section State:
 #' The `$state` is left empty (`list()`).
 #'
 #' @section Parameters:
-#' [`PipeOpNOP`] has no parameters.
+#' `PipeOpNOP` has no parameters.
 #'
 #' @section Internals:
-#' [`PipeOpNOP`] is a useful "default" stand-in for a [`PipeOp`]/[`Graph`] that does nothing.
+#' `PipeOpNOP` is a useful "default" stand-in for a [`PipeOp`]/[`Graph`] that does nothing.
 #'
 #' @section Fields:
 #' Only fields inherited from [`PipeOp`].
